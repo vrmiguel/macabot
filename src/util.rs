@@ -1,6 +1,6 @@
 use telegram_bot::*;
 
-use crate::phrases::*;
+use rand::{distributions::WeightedIndex, prelude::*};
 
 pub (crate) fn get_last_name(user: &User) -> String {
     if let Some(last_name) = user.last_name.clone() {
@@ -8,6 +8,15 @@ pub (crate) fn get_last_name(user: &User) -> String {
     } else {
         "".into()
     }
+}
+
+pub (crate) fn choose_elem<T>(elems: &[T], weights: &[i32]) -> T 
+    where T: Clone
+{
+    let dist = WeightedIndex::new(weights).unwrap();
+    let mut rng = thread_rng();
+
+    elems[dist.sample(&mut rng)].clone()
 }
 
 pub (crate) fn get_chat_ref(message: & Message) -> ChatRef {
