@@ -8,6 +8,7 @@ use telegram_bot::*;
 use util as ut;
 use phrases::*;
 
+use chrono::{NaiveDateTime, Utc};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -15,11 +16,23 @@ async fn main() -> Result<(), Error> {
     let api = Api::new(token);
 
     println!("Starting bot.");
+    
 
     let mut stream = api.stream();
     while let Some(update) = stream.next().await {
         let update = update?;
+
         if let UpdateKind::Message(message) = update.kind {
+
+            let message_data = NaiveDateTime::from_timestamp(message.date, 0);
+            let current_time = Utc::now().naive_utc();
+
+            let elapsed = current_time.signed_duration_since(message_data);
+
+            if elapsed.num_seconds() > 5 {
+                println!("Message is too old. Skipping.");
+                continue;
+            }
 
             // Occasionally respond to a text message
             if let MessageKind::Text { ref data, .. } = message.kind {

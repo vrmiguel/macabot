@@ -6,9 +6,11 @@ pub const RAND_PHRASES: &[&str] = &[
     "vc é ancap ??",
     "Concordo.",
     "Isso aí que você tá falando é coisa de comunista",
+    "tive um passarinho que morreu assim",
+    "Já falei sobre isso no Medium."
 ];
 
-pub const RAND_PHRASES_WEIGHTS: &[i32] = &[2, 1, 1];
+pub const RAND_PHRASES_WEIGHTS: &[i32] = &[2, 1, 1, 1, 1];
 
 pub const USER_LEFT: &[&str] = &["Vai pela sombra, USER!", "Volte USER, eu não mereço esse castigo!\nPode até brigar comigo\nMas não me deixe nessa solidão"];
 pub const USER_LEFT_WEIGHTS: &[i32] = &[1, 1];
