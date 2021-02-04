@@ -1,10 +1,9 @@
 mod util;
 mod phrases;
 
-use std::{env, ptr::replace, str};
+use std::env;
 use futures::StreamExt;
 use telegram_bot::*;
-use tokio::*;
 
 use util as ut;
 use phrases::*;
@@ -26,19 +25,25 @@ async fn main() -> Result<(), Error> {
             if let MessageKind::Text { ref data, .. } = message.kind {
                 println!("<{}{}>: {}", &message.from.first_name, ut::get_last_name(&message.from), data);
 
-                api.send(message.text_reply(format!(
-                    "Hi, {}! You just wrote '{}'",
-                    &message.from.first_name, data
-                )))
-                .await?;
+                match ut::choose_elem(SAY_SOMETHING, SAY_SOMETHING_WEIGHTS) {
+                    true => {
+                        println!("Saying something");
+                        api.send(message.text_reply(ut::choose_elem(
+                            RAND_PHRASES, RAND_PHRASES_WEIGHTS
+                        )))
+                        .await?;
+                    },
+                    _ => {}
+                }
             }
 
             // Respond to pinned messages
             if let MessageKind::PinnedMessage { ref data } = message.kind {
                 // let t = *data;
                 println!("Someone pinned a message: {:?}", data);
-                api.send(message.text_reply(format!(
-                    "Não tem mais o que fazer?",
+                api.send(message.text_reply(ut::choose_elem(
+                    PINNED_MESSAGE,
+                          PINNED_MESSAGE_WEIGHTS
                 )))
                 .await?;
             }
@@ -51,28 +56,38 @@ async fn main() -> Result<(), Error> {
                             .collect();
             
                 let chat_id = message.chat.id();
-                for username in usernames {
-                    let chat_ref = ChatRef::from_chat_id(chat_id);
-                    let message = format!("Olá, @{}! Qual o seu Pokémon favorito?", username);
-                    api.send(SendMessage::new(chat_ref, &message)).await?;
+
+                // If only one user entered recently, we can reply to his 'entering' message directly
+                if usernames.len() == 1 {
+                    let msg = format!("Olá, @{}! Qual o seu Pokémon favorito?", usernames[0]);
+                    api.send(message.text_reply(&msg)).await?;
+                } else {
+                    for username in usernames {
+                        let chat_ref = ChatRef::from_chat_id(chat_id);
+                        let message = format!("Olá, @{}! Qual o seu Pokémon favorito?", username);
+                        api.send(SendMessage::new(chat_ref, &message)).await?;
+                    }
                 }
             }
 
             if let MessageKind::LeftChatMember { ref data } = message.kind {
                 let name      = data.first_name.clone();
-                let chat_ref = ut::get_chat_ref(&message);
-                let msg = USER_LEFT[1];
+                let msg = ut::choose_elem(USER_LEFT, USER_LEFT_WEIGHTS);
                 let msg = msg.replace("USER", &name);
-                api.send(SendMessage::new(chat_ref, &msg)).await?;
+                api.send(message.text_reply(msg)).await?;
             }
 
             if let MessageKind::Voice { ref data } = message.kind {
                 let duration = data.duration;
                 println!("Someone has sent a voice message. Duration: {}", duration);
                 if duration > 6 {
-                    let chat_ref = ut::get_chat_ref(&message);
-                    api.send(SendMessage::new(chat_ref, "Ninguém quer ouvir seu áudio, irmão...")).await?;
+                    // let chat_ref = ut::get_chat_ref(&message);
+                    api.send(message.text_reply("Ninguém quer ouvir áudio, irmão...")).await?;
                 }
+            }
+
+            if let MessageKind::NewChatPhoto { data: _ } = message.kind {                
+                api.send(message.text_reply("'Tava melhor antes")).await?;   
             }
         }
     }
