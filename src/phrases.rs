@@ -1,0 +1,2 @@
+pub const USER_LEFT: &[&str] = &["Vai pela sombra, USER!", "Volte USER, eu não mereço esse castigo!\nPode até brigar comigo\nMas não me deixe nessa solidão"];
+pub const PINNED_MESSAGE: &[&str] = &["Coisa de desocupado", "1, 2, 3, pin!"];
