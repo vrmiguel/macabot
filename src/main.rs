@@ -8,36 +8,56 @@ use telegram_bot::*;
 use util as ut;
 use phrases::*;
 
-use chrono::{NaiveDateTime, Utc};
+use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let token = env::var("TELEGRAM_BOT_TOKEN").expect("TELEGRAM_BOT_TOKEN not set");
     let api = Api::new(token);
 
-    println!("Starting bot.");
+
+    // Sanity check the weight values
+    assert!(SAY_SOMETHING.len() == SAY_SOMETHING_WEIGHTS.len());
+    assert!(RAND_PHRASES.len()  == RAND_PHRASES_WEIGHTS.len());
+    assert!(USER_LEFT.len()     == USER_LEFT_WEIGHTS.len());
+    assert!(BAIT.len()          == BAIT_WEIGHTS.len());
     
 
-    let mut stream = api.stream();
+    println!("Starting bot.");
+    
+    let mut last_message_sent = Utc::now().naive_utc();
+
+   let mut stream = api.stream();
     while let Some(update) = stream.next().await {
         let update = update?;
 
         if let UpdateKind::Message(message) = update.kind {
 
-            let message_data = NaiveDateTime::from_timestamp(message.date, 0);
-            let current_time = Utc::now().naive_utc();
 
-            let elapsed = current_time.signed_duration_since(message_data);
-
-            if elapsed.num_seconds() > 5 {
+            if ut::is_message_too_old(&message) {
                 println!("Message is too old. Skipping.");
                 continue;
             }
 
-            // Occasionally respond to a text message
+            
+
             if let MessageKind::Text { ref data, .. } = message.kind {
                 println!("<{}{}>: {}", &message.from.first_name, ut::get_last_name(&message.from), data);
 
+                // Check for built-in commands
+                match data.as_str().trim() {
+                    "/bait" => { ut::bait(&message, &api).await?; continue; }
+                    _       => {}
+                };
+
+                if ut::is_in_cooldown(&last_message_sent) {
+                    println!("Bot is in cooldown and won't respond.");
+                    continue;
+                } else {
+                    last_message_sent = Utc::now().naive_utc();
+                }
+
+                // Occasionally respond to a text message
                 match ut::choose_elem(SAY_SOMETHING, SAY_SOMETHING_WEIGHTS) {
                     true => {
                         println!("Saying something");
@@ -51,7 +71,7 @@ async fn main() -> Result<(), Error> {
             }
 
             // Respond to pinned messages
-            if let MessageKind::PinnedMessage { ref data } = message.kind {
+            if let MessageKind::PinnedMessage { ref data } = message.kind { 
                 // let t = *data;
                 println!("Someone pinned a message: {:?}", data);
                 api.send(message.text_reply(ut::choose_elem(
