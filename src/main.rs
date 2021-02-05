@@ -50,16 +50,15 @@ async fn main() -> Result<(), Error> {
                     _       => {}
                 };
 
-                if ut::is_in_cooldown(&last_message_sent) {
-                    println!("Bot is in cooldown and won't respond.");
-                    continue;
-                } else {
-                    last_message_sent = Utc::now().naive_utc();
-                }
-
                 // Occasionally respond to a text message
                 match ut::choose_elem(SAY_SOMETHING, SAY_SOMETHING_WEIGHTS) {
                     true => {
+                        if ut::is_in_cooldown(&last_message_sent) {
+                            println!("Bot is in cooldown and won't respond.");
+                            continue;
+                        } else {
+                            last_message_sent = Utc::now().naive_utc();
+                        }
                         println!("Saying something");
                         api.send(message.text_reply(ut::choose_elem(
                             RAND_PHRASES, RAND_PHRASES_WEIGHTS
